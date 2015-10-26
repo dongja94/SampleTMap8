@@ -2,6 +2,7 @@ package com.example.dongja94.sampletmap;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.location.LocationListener;
@@ -21,12 +22,14 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import com.skp.Tmap.TMapData;
 import com.skp.Tmap.TMapMarkerItem;
 import com.skp.Tmap.TMapPOIItem;
 import com.skp.Tmap.TMapPoint;
+import com.skp.Tmap.TMapPolyLine;
 import com.skp.Tmap.TMapView;
 
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
     EditText keywordView;
     ArrayAdapter<POIItem> mAdapter;
+    RadioGroup group;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         mapView = (TMapView)findViewById(R.id.mapView);
         listView = (ListView)findViewById(R.id.listView);
         keywordView = (EditText)findViewById(R.id.edit_keyword);
+        group = (RadioGroup)findViewById(R.id.radioGroup);
         mAdapter = new ArrayAdapter<POIItem>(this, android.R.layout.simple_list_item_1);
         listView.setAdapter(mAdapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -108,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    clearAll();
                                     for (TMapPOIItem item : arrayList) {
                                         POIItem poi = new POIItem();
                                         poi.poi = item;
@@ -126,6 +132,43 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        btn = (Button)findViewById(R.id.btn_route);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (start != null && end != null) {
+                    TMapData data = new TMapData();
+                    data.findPathData(start, end, new TMapData.FindPathDataListenerCallback() {
+                        @Override
+                        public void onFindPathData(final TMapPolyLine tMapPolyLine) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    tMapPolyLine.setLineColor(Color.RED);
+                                    tMapPolyLine.setLineWidth(5);
+                                    mapView.addTMapPath(tMapPolyLine);
+                                    Bitmap sbm = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_input_add)).getBitmap();
+                                    Bitmap ebm = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_input_get)).getBitmap();
+                                    mapView.setTMapPathIcon(sbm, ebm);
+                                    start = null;
+                                    end = null;
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void clearAll() {
+//        for (int i = 0 ; i < mAdapter.getCount(); i++) {
+//            POIItem item = mAdapter.getItem(i);
+//            mapView.removeMarkerItem(item.poi.getPOIID());
+//        }
+        mapView.removeAllMarkerItem();
+        mAdapter.clear();
     }
 
     private void addMarkerPOI(ArrayList<TMapPOIItem> list) {
@@ -218,6 +261,8 @@ public class MainActivity extends AppCompatActivity {
         mLM.removeUpdates(mListener);
     }
 
+    TMapPoint start, end;
+
     private void setupMap() {
         if (cacheLocation != null) {
             moveMap(cacheLocation.getLatitude(), cacheLocation.getLongitude());
@@ -228,7 +273,17 @@ public class MainActivity extends AppCompatActivity {
         mapView.setOnCalloutRightButtonClickListener(new TMapView.OnCalloutRightButtonClickCallback() {
             @Override
             public void onCalloutRightButton(TMapMarkerItem tMapMarkerItem) {
-                Toast.makeText(MainActivity.this, "Marker Click", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this, "Marker Click", Toast.LENGTH_SHORT).show();
+                switch (group.getCheckedRadioButtonId()) {
+                    case R.id.radio_start :
+                        start = tMapMarkerItem.getTMapPoint();
+                        Toast.makeText(MainActivity.this, "set start", Toast.LENGTH_SHORT).show();
+                        break;
+                    case R.id.radio_end :
+                        end = tMapMarkerItem.getTMapPoint();
+                        Toast.makeText(MainActivity.this, "set end", Toast.LENGTH_SHORT).show();
+                        break;
+                }
             }
         });
     }
