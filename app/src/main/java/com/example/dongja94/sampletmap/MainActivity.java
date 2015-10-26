@@ -12,20 +12,32 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
+import com.skp.Tmap.TMapData;
 import com.skp.Tmap.TMapMarkerItem;
+import com.skp.Tmap.TMapPOIItem;
 import com.skp.Tmap.TMapPoint;
 import com.skp.Tmap.TMapView;
+
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
     TMapView mapView;
     LocationManager mLM;
+    ListView listView;
+    EditText keywordView;
+    ArrayAdapter<POIItem> mAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +56,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         mapView = (TMapView)findViewById(R.id.mapView);
+        listView = (ListView)findViewById(R.id.listView);
+        keywordView = (EditText)findViewById(R.id.edit_keyword);
+        mAdapter = new ArrayAdapter<POIItem>(this, android.R.layout.simple_list_item_1);
+        listView.setAdapter(mAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                POIItem item = (POIItem)listView.getItemAtPosition(position);
+                moveMap(item.poi.getPOIPoint().getLatitude(), item.poi.getPOIPoint().getLongitude());
+            }
+        });
+
         new RegisterTask().execute();
 
         mLM = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
@@ -70,6 +94,58 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+        btn = (Button)findViewById(R.id.btn_search);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String keyword = keywordView.getText().toString();
+                if (!TextUtils.isEmpty(keyword)) {
+                    TMapData data = new TMapData();
+                    data.findAllPOI(keyword, new TMapData.FindAllPOIListenerCallback() {
+                        @Override
+                        public void onFindAllPOI(final ArrayList<TMapPOIItem> arrayList) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    for (TMapPOIItem item : arrayList) {
+                                        POIItem poi = new POIItem();
+                                        poi.poi = item;
+                                        mAdapter.add(poi);
+                                    }
+//                                    mapView.addTMapPOIItem(arrayList);
+                                    addMarkerPOI(arrayList);
+                                    if (arrayList.size() > 0) {
+                                        TMapPOIItem first = arrayList.get(0);
+                                        moveMap(first.getPOIPoint().getLatitude(), first.getPOIPoint().getLongitude());
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void addMarkerPOI(ArrayList<TMapPOIItem> list) {
+        for (TMapPOIItem poi : list) {
+            TMapPoint point = poi.getPOIPoint();
+            TMapMarkerItem item = new TMapMarkerItem();
+            item.setTMapPoint(point);
+            Bitmap icon = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_map)).getBitmap();
+            item.setIcon(icon);
+            item.setPosition(0.5f, 1);
+            item.setCalloutTitle(poi.getPOIName());
+            item.setCalloutSubTitle(poi.getPOIContent());
+            Bitmap left = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_alert)).getBitmap();
+            item.setCalloutLeftImage(left);
+            Bitmap right = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_info)).getBitmap();
+            item.setCalloutRightButtonImage(right);
+            item.setCanShowCallout(true);
+
+            mapView.addMarkerItem(poi.getPOIID(), item);
+        }
     }
 
     boolean isInitialized = false;
