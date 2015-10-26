@@ -15,7 +15,11 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
 
+import com.skp.Tmap.TMapMarkerItem;
+import com.skp.Tmap.TMapPoint;
 import com.skp.Tmap.TMapView;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,6 +47,29 @@ public class MainActivity extends AppCompatActivity {
         new RegisterTask().execute();
 
         mLM = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
+        Button btn = (Button)findViewById(R.id.btn_marker);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TMapPoint point = mapView.getCenterPoint();
+                TMapMarkerItem item = new TMapMarkerItem();
+                item.setTMapPoint(point);
+                Bitmap icon = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_map)).getBitmap();
+                item.setIcon(icon);
+                item.setPosition(0.5f, 1);
+                item.setCalloutTitle("My Marker");
+                item.setCalloutSubTitle("Map Marker Test");
+                Bitmap left = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_alert)).getBitmap();
+                item.setCalloutLeftImage(left);
+                Bitmap right = ((BitmapDrawable)getResources().getDrawable(android.R.drawable.ic_dialog_info)).getBitmap();
+                item.setCalloutRightButtonImage(right);
+                item.setCanShowCallout(true);
+
+                mapView.addMarkerItem("marker0", item);
+
+            }
+        });
     }
 
     boolean isInitialized = false;
@@ -121,6 +148,13 @@ public class MainActivity extends AppCompatActivity {
             setMyLocation(cacheLocation.getLatitude(), cacheLocation.getLongitude());
             cacheLocation = null;
         }
+
+        mapView.setOnCalloutRightButtonClickListener(new TMapView.OnCalloutRightButtonClickCallback() {
+            @Override
+            public void onCalloutRightButton(TMapMarkerItem tMapMarkerItem) {
+                Toast.makeText(MainActivity.this, "Marker Click", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
